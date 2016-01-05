@@ -1,0 +1,29 @@
+{{mic-check}}
+<table>
+  <tr>
+    <th>Codec</th>
+    <th>Direct</th>
+    <th>Transcode</th>
+  </tr>
+  {{#each model as |format|}}
+    <tr>
+      <td>{{format.name}}</td>
+      <td>
+        {{#if format.direct}}
+          <i class="fa fa-check"></i>
+        {{else}}
+          <i class="fa fa-times"></i>
+        {{/if}}
+      </td>
+      <td>
+        {{#if format.transcode}}
+          <i class="fa fa-check"></i>
+        {{else}}
+          <i class="fa fa-times"></i>
+        {{/if}}
+      </td>
+    </tr>
+  {{/each}}
+</table>
+
+{{outlet}}
