@@ -1,29 +1,29 @@
-{{mic-check}}
-<table>
-  <tr>
-    <th>Codec</th>
-    <th>Direct</th>
-    <th>Transcode</th>
-  </tr>
-  {{#each model as |format|}}
-    <tr>
-      <td>{{format.name}}</td>
-      <td>
-        {{#if format.direct}}
-          <i class="fa fa-check"></i>
-        {{else}}
-          <i class="fa fa-times"></i>
-        {{/if}}
-      </td>
-      <td>
-        {{#if format.transcode}}
-          <i class="fa fa-check"></i>
-        {{else}}
-          <i class="fa fa-times"></i>
-        {{/if}}
-      </td>
-    </tr>
-  {{/each}}
-</table>
+<div class="container">
+  <div class="row">
+    <div class="col-xs-4 col-xs-offset-4">
+      <table class="table table-striped table-bordered">
+        <tbody>
+          <tr>
+            <th>Codec</th>
+            <th>Direct</th>
+            <th>Transcode</th>
+          </tr>
+          {{#each model as |format|}}
+            <tr>
+              <td>{{format.name}}</td>
+              <td>
+                <i class="fa {{if format.direct 'fa-check text-success' 'fa-times text-danger'}}"></i>
+              </td>
+              <td>
+                <i class="fa {{if format.transcode 'fa-check text-success' 'fa-times text-danger'}}"></i>
+              </td>
+            </tr>
+          {{/each}}
+        </tbody>
+      </table>
+      {{mic-check}}
+    </div>
+  </div>
+</div>
 
 {{outlet}}
