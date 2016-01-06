@@ -1,6 +1,6 @@
 <div class="container">
   <div class="row">
-    <div class="col-xs-4 col-xs-offset-4">
+    <div class="col-sm-6 col-sm-offset-3">
       <table class="table table-striped table-bordered">
         <tbody>
           <tr>
@@ -12,15 +12,19 @@
             <tr>
               <td>{{format.name}}</td>
               <td>
-                <i class="fa {{if format.direct 'fa-check text-success' 'fa-times text-danger'}}"></i>
+                <i class="fa {{format.directUiClass}}"></i>
               </td>
               <td>
-                <i class="fa {{if format.transcode 'fa-check text-success' 'fa-times text-danger'}}"></i>
+                <i class="fa {{format.transcodeUiClass}}"></i>
               </td>
             </tr>
           {{/each}}
         </tbody>
       </table>
+    </div>
+  </div>
+  <div class="row">
+    <div class="col-sm-6 col-sm-offset-3 text-xs-right">
       {{mic-check}}
     </div>
   </div>
