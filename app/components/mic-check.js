@@ -74,12 +74,17 @@ var _formats = [
 ];
 
 export default Ember.Component.extend({
-  onLoadedData (event) {
+  onLoadedData () {
     console.log('onLoadedData');
-    window.removeEventListener('keydown', this.RBR);
-    window.removeEventListener('mousedown', this.RBR);
-    window.removeEventListener('touchstart', this.RBR);
-    event.target.play();
+    var element = document.getElementById('mic-check');
+    // element.onloadeddata = null;
+    // window.removeEventListener('keydown', this.RBR);
+    // window.removeEventListener('mousedown', this.RBR);
+    // window.removeEventListener('touchstart', this.RBR);
+    // element.preload = 'auto';
+    element.play();
+    // element.autoplay = true;
+    // return true;
   },
 
   audioElement: function () {
@@ -87,43 +92,139 @@ export default Ember.Component.extend({
   }.property(),
 
   RBR (event) {
-    console.log('rbr');
+    console.log(event.type);
     document.getElementById('mic-check').load();
+    return true;
   },
 
   checkFormats (records) {
-    var element = this.get('audioElement');
+    console.log('checkFormats(records['+ (records && records.length)+']);');
+    if (!records) {
+      records = this.get('store').push({data: _formats});
+    }
+    var element = document.getElementById('mic-check');
     var format = records.shift();
     var srcBase = '/api/mic-check/';
     var method = 'direct';
     var that = this;
-    var onPlay = function (event) {
+    format.set('directWorking', true);
+
+    var sendEvents = true;
+    var ignoreEvents = false;
+    var state = {};
+    var doLog = function (message) {
+      console.log(message + ' ' + format.get('name') + ' ' + method);
+    };
+
+    var resetElement = function () {
+      sendEvents = false;
+      ignoreEvents = true;
+      state = {};
       element.pause();
       element.removeAttribute('src');
-      format.set(method + 'Supported', event.type==='play');
+    };
+
+    var setFormat = function (supported) {
+      resetElement();
+      format.set(method + 'Supported', supported);
       format.set(method + 'Working', false);
       format.set(method + 'Checked', true);
+      doLog('supported is ' + supported);
+    };
+
+    var doNextAction = function () {
       if (method === 'direct') {
         format.set('transcodeWorking', true);
         method = 'transcode';
+        sendEvents = true;
+        ignoreEvents = false;
         element.src = srcBase + 'transcode.' + format.get('name');
-        element.load();
       } else {
-        element.onplay = null;
-        format.save().then(function (event) {
-          console.log(event);
+        format.save().then(function () {
           if (records.length) {
             that.checkFormats(records);
+          } else {
+            that.get('store').findAll('format').then(function (records) {
+              records.save();
+            });
           }
         });
       }
     };
-    console.log(format);
-    format.set('directWorking', true);
-    element.onplay = onPlay;
-    element.onerror = onPlay;
+
+    var checkEvent = function (event) {
+      var decoded = event.target.webkitAudioDecodedByteCount;
+      var buffered = event.target.buffered.length;
+      var currentTime = event.target.currentTime;
+      doLog('decoded ' + decoded + ' buffered ' + buffered + ' currentTime ' + currentTime);
+      switch (event.type) {
+        // case 'timeupdate':
+        //   return 2;
+        case 'waiting':
+          if (state.playing) {
+            return 1;
+          }
+        default:
+          if (state[event.type]) {
+            state[event.type] = state[event.type] + 1;
+          } else {
+            state[event.type] = 1;
+          }
+      }
+      if (currentTime || buffered || decoded) {
+        return 2;
+      }
+      if (buffered === 0 || decoded === 0) {
+        if (state.timeupdate && state.progress > 2) {
+          return 1;
+        }
+        if (state.ended) {
+          return 1;
+        }
+      }
+      return 0;
+    };
+
+    var onEvent = function (event) {
+      if (ignoreEvents) {
+        return;
+      }
+      if (event.type==='error' || element.error) {
+        doLog('checking ' + event.type);
+        setFormat(false);
+        doNextAction();
+      } else if (sendEvents) {
+        doLog('checking ' + event.type);
+        var status = checkEvent(event);
+        if (status) {
+          setFormat(status - 1);
+          doNextAction();
+        }
+      } else {
+        doLog('ignoring ' + event.type);
+      }
+    };
+
+    element.oncanplay = onEvent;
+    element.oncanplaythrough = onEvent;
+    element.ondurationchange = onEvent;
+    element.onemptied = onEvent;
+    element.onended = onEvent;
+    element.onended = onEvent;
+    element.onerror = onEvent;
+    element.onloadeddata = onEvent;
+    element.onloadedmetadata = onEvent;
+    element.onloadstart = onEvent;
+    element.onpause = onEvent;
+    element.onplay = onEvent;
+    element.onplaying = onEvent;
+    element.onprogress = onEvent;
+    element.onstalled = onEvent;
+    element.ontimeupdate = onEvent;
+    element.onwaiting = onEvent;
+
+    element.load();
     element.src = srcBase + 'direct.' + format.get('name');
-    element.preload = 'auto';
   },
 
   store: function () {
@@ -131,32 +232,22 @@ export default Ember.Component.extend({
   }.property(),
 
   didInsertElement () {
-    this.get('audioElement').onloadeddata = this.onLoadedData.bind(this);
-    this.checkFormats(this.get('store').push({data: _formats}));
-    window.addEventListener('keydown', this.RBR);
-    window.addEventListener('mousedown', this.RBR);
-    window.addEventListener('touchstart', this.RBR);
-    //window.records = records;
+    this.get('store').push({data: _formats});
+    this.checkFormats();
+    // this.get('audioelement').onloadeddata = this.onloadedData.bind(this);
+    // // this.checkFormats();
+    // window.addEventListener('keydown', this.RBR);
+    // window.addEventListener('mousedown', this.RBR);
+    // window.addEventListener('touchstart', this.RBR);
   },
 
   actions: {
     forceCheck () {
-      var that = this;
-      this.get('targetObject.store').findAll('format').then(
-        function (records) {
-          var recordsArray = records.toArray();
-          var killit = function (record) {
-            record.destroyRecord().then(function () {
-              if (recordsArray.length) {
-                killit(recordsArray.shift());
-              } else {
-                that.initializeRecords(true);
-              }
-            });
-          };
-          killit(recordsArray.shift());
-        }
-      );
+      //document.getElementById('mic-check').src = null;
+      // element.oncanplay = function (event) {
+      //   event.target.play();
+      // };
+      this.checkFormats();
     }
   }
 });
